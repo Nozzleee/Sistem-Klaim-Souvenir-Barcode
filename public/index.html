@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate QR Souvenir</title>
+</head>
+<body>
+  <h2>Form Tamu</h2>
+  <form id="qrForm">
+    <label>Nama Tamu:</label><br>
+    <input type="text" id="name" required><br><br>
+
+    <label>Kategori Tamu:</label><br>
+    <select id="category" required>
+      <option value="">-- Pilih Kategori --</option>
+      <option value="Wulan">Wulan</option>
+      <option value="Erik">Erik</option>
+    </select><br><br>
+
+    <button type="submit">Generate QR</button>
+  </form>
+
+  <div id="qrResult" style="margin-top: 20px;"></div>
+
+  <script>
+    const form = document.getElementById('qrForm');
+    const qrResult = document.getElementById('qrResult');
+    const qrData = `${category}-${name}-${Date.now()}`;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const category = document.getElementById('category').value;
+
+      const response = await fetch('/generate-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, category })
+      });
+
+      const data = await response.json();
+
+      if (data.qrImage) {
+        qrResult.innerHTML = `
+          <p>QR untuk ${data.name} (${data.category})</p>
+          <img src="${data.qrImage}" alt="QR Code"><br><br>
+          <a href="${data.qrImage}" download="${data.category}-${data.name}.png">Download QR Code</a>
+        `;
+      } else {
+        qrResult.textContent = 'Gagal generate QR.';
+      }
+    });
+  </script>
+</body>
+</html>

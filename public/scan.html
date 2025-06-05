@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scan QR Code Klaim Souvenir</title>
+  <style>
+    video, canvas {
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <h2>Scan QR Code Souvenir</h2>
+  <video id="video" autoplay></video>
+  <canvas id="canvas" hidden></canvas>
+  <p id="message">Menunggu scan...</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const message = document.getElementById('message');
+
+    // Akses kamera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true); // iOS
+        video.play();
+        requestAnimationFrame(tick);
+      })
+      .catch(err => {
+        message.textContent = 'Tidak bisa akses kamera: ' + err;
+      });
+
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+          // QR code terbaca
+          message.textContent = 'QR Code terbaca: ' + code.data;
+          // Kirim ke server untuk validasi klaim
+          fetch('/scan-qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qrData: code.data })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'success') {
+              message.textContent = `Selamat ${data.name}, souvenir sudah berhasil diklaim pada ${data.claimTime}`;
+            } else if (data.status === 'already') {
+              message.textContent = 'Souvenir sudah pernah diklaim sebelumnya.';
+            } else {
+              message.textContent = 'QR Code tidak valid atau tidak dikenali.';
+            }
+          })
+          .catch(() => {
+            message.textContent = 'Gagal menghubungi server.';
+          });
+
+          // Stop kamera setelah scan
+          video.srcObject.getTracks().forEach(track => track.stop());
+          return; // berhenti loop tick
+        } else {
+          message.textContent = 'Mencari QR code...';
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+  </script>
+</body>
+</html>

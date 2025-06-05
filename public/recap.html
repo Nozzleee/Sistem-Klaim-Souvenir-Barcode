@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rekapan Klaim Souvenir</title>
+</head>
+<body>
+  <h2>Rekap Klaim Souvenir</h2>
+
+  <label for="filterCategory">Filter Kategori:</label>
+  <select id="filterCategory" onchange="loadRecap()">
+    <option value="">Semua</option>
+    <option value="Wulan">Tamu Wulan</option>
+    <option value="Erik">Tamu Erik</option>
+  </select>
+
+  <table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Kategori</th>
+        <th>Nama</th>
+        <th>Status Klaim</th>
+        <th>Waktu Klaim</th>
+      </tr>
+    </thead>
+    <tbody id="recap-table"></tbody>
+  </table>
+
+  <script>
+    async function loadRecap() {
+      const filter = document.getElementById('filterCategory').value;
+      const res = await fetch('/recap');
+      const guests = await res.json();
+
+      const tbody = document.getElementById('recap-table');
+      tbody.innerHTML = '';
+
+      const filtered = filter ? guests.filter(g => g.category === filter) : guests;
+
+      filtered.forEach(g => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${g.category}</td>
+          <td>${g.name}</td>
+          <td>${g.claimed ? 'Sudah Klaim' : 'Belum Klaim'}</td>
+          <td>${g.claimTime || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    loadRecap();
+  </script>
+</body>
+</html>
